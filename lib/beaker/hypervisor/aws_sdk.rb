@@ -375,6 +375,17 @@ module Beaker
       end
       config[:block_device_mappings] = block_device_mappings if image.root_device_type == :ebs
       reservation = client(region).run_instances(config)
+      instances = reservation.instances
+      instance_ids = []
+      instances.each do | instance |
+        instance_ids.append(instance.instance_id)
+      end
+      begin
+        client(region).wait_until(:instance_running, instance_ids:instance_ids)
+        @logger.notify('Waiting for instance to be in running state')
+      rescue Aws::Waiters::Errors::WaiterFailed => error
+        @logger.error("failed waiting for instance running: #{error.message}")
+      end
       reservation.instances.first
     end
 
